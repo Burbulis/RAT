@@ -1,7 +1,7 @@
 // test.cpp : Defines the entry point for the console application.
 
 //
-
+https://gist.github.com/hasherezade/87158b926e33418f5d3b0a0026d0ccc2
 
 
 #include "stdafx.h"
