@@ -9,12 +9,24 @@
 #include <iterator>
 #include <list>
 
-#include "process_mem_man.h"
+//#include "process_mem_man.h"
 
 #include "md5.h"
 #define STATUS_SUCCESS                   ((NTSTATUS)0x00000000L)
 
+typedef long NTSTATUS;
+typedef NTSTATUS *PNTSTATUS;
 
+typedef struct _PEB_LDR_DATA
+
+{
+   ULONG Length;
+   BOOLEAN Initialized;
+   PVOID SsHandle;
+   LIST_ENTRY InLoadOrderModuleList;
+   LIST_ENTRY InMemoryOrderModuleList;
+   LIST_ENTRY InInitializationOrderModuleList;
+} PEB_LDR_DATA, *PPEB_LDR_DATA;
 
 typedef struct _CLIENT_ID {
   DWORD UniqueProcess;
@@ -37,8 +49,6 @@ typedef struct _UNICODE_STRING {
 	PWSTR Buffer; } 
 UNICODE_STRING, *PUNICODE_STRING;
 
-typedef long NTSTATUS;
-typedef NTSTATUS *PNTSTATUS;
 
 typedef ULONG KAFFINITY;
 typedef KAFFINITY *PKAFFINITY;
@@ -113,16 +123,7 @@ typedef struct _PBI_WOW64 {
 
 
 
-typedef struct _PEB_LDR_DATA
 
-{
-   ULONG Length;
-   BOOLEAN Initialized;
-   PVOID SsHandle;
-   LIST_ENTRY InLoadOrderModuleList;
-   LIST_ENTRY InMemoryOrderModuleList;
-   LIST_ENTRY InInitializationOrderModuleList;
-} PEB_LDR_DATA, *PPEB_LDR_DATA;
 
 typedef struct _RTL_USER_PROCESS_PARAMETERS {
   BYTE           Reserved1[16];
@@ -131,7 +132,6 @@ typedef struct _RTL_USER_PROCESS_PARAMETERS {
   UNICODE_STRING CommandLine;
 } RTL_USER_PROCESS_PARAMETERS, *PRTL_USER_PROCESS_PARAMETERS;
 
-/*
 typedef struct _PROCESS_BASIC_INFORMATION_WOW64 {
 	PVOID Reserved1[2];
 	PVOID64 PebBaseAddress;
@@ -139,9 +139,8 @@ typedef struct _PROCESS_BASIC_INFORMATION_WOW64 {
 	ULONG_PTR UniqueProcessId[2];
 	PVOID Reserved3[2];
 } PROCESS_BASIC_INFORMATION_WOW64;
-*/
-/*
-typedef struct _PEBx64 {
+
+/*typedef struct _PEBx64 {
 	BYTE Reserved1[2];
 	BYTE BeingDebugged;
 	BYTE Reserved2[21];
@@ -153,7 +152,6 @@ typedef struct _PEBx64 {
 	ULONG SessionId;
 } PEBx64 , *PEBx64;
 */
-
 
 /*
 typedef struct _PEBx64 {

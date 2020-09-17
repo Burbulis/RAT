@@ -1,8 +1,8 @@
 // test.cpp : Defines the entry point for the console application.
 
 //
-https://gist.github.com/hasherezade/87158b926e33418f5d3b0a0026d0ccc2
-https://coderoad.ru/3801517/%D0%9A%D0%B0%D0%BA-%D0%BF%D0%B5%D1%80%D0%B5%D1%87%D0%B8%D1%81%D0%BB%D0%B8%D1%82%D1%8C-%D0%BC%D0%BE%D0%B4%D1%83%D0%BB%D0%B8-%D0%B2-64-%D0%B1%D0%B8%D1%82%D0%BD%D0%BE%D0%BC-%D0%BF%D1%80%D0%BE%D1%86%D0%B5%D1%81%D1%81%D0%B5-%D0%B8%D0%B7-32-%D0%B1%D0%B8%D1%82%D0%BD%D0%BE%D0%B3%D0%BE-%D0%BF%D1%80%D0%BE%D1%86%D0%B5%D1%81%D1%81%D0%B0-WOW
+
+
 
 #include "stdafx.h"
 #include <cassert>
@@ -21,6 +21,8 @@ https://coderoad.ru/3801517/%D0%9A%D0%B0%D0%BA-%D0%BF%D0%B5%D1%80%D0%B5%D1%87%D0
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
 #include <boost/thread/mutex.hpp>
+#include "proc_mini_lib.h"
+#include "combine.h"
 
 
 
@@ -471,6 +473,15 @@ int _tmain(int argc, _TCHAR* argv[])
 {
 
   boost::asio::io_service service;
+
+
+
+  GetProcessSeq::PList list;
+  GetProcessSeq gps;
+  gps.get(list);
+  for (size_t i = 0; i < list.size(); ++i) {
+		GetProcessBasicInfo gpbi(list[i].Uid);
+  }
 
  // boost::asio::ip::tcp::endpoint ep( boost::asio::ip::tcp::v4(), 2001); // listen on 2001
 

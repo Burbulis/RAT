@@ -13,7 +13,9 @@ struct GetThreadBasicInfo
 		HINSTANCE hinst_ntdll = LoadLibraryA("ntdll.dll");
 		NtQueryInformationThread = reinterpret_cast<PNTQUERYINFORMATIONTHREAD>(GetProcAddress(hinst_ntdll, "NtQueryInformationThread"));
 		HANDLE proc_Handle = ::OpenProcess(PROCESS_ALL_ACCESS, true, Pid);
-
+		mem::IS_WOW64 iw;
+		//iw.
+	
 		//mem::protector<>
 		DWORD NtStatus = NtQueryInformationThread(ThreadId, ThreadBasicInformation, &tbi, sizeof(tbi), 0);
 		if (tbi.TebBaseAddress)
@@ -25,74 +27,33 @@ struct GetThreadBasicInfo
 			mem::_handle open(PROCESS_ALL_ACCESS, Pid);
 			
 		    //mem::read_a< PVOID64 >::lister_t *olx = new mem::read_a< PVOID64 >::lister_t;
-		    mem::ObjectList< mem::Universal_Type<PVOID64, ULONG64> > *olx = new mem::ObjectList< mem::Universal_Type<PVOID64, ULONG64> >;
-
-			mem::read_a< PVOID64 > r_a;
-			r_a.rx( olx ,reinterpret_cast< PVOID64 >(tbi.TebBaseAddress)); /*,reinterpret_cast<PVOID64>(teb.ProcessEnvironmentBlock));//,*/
+		    
+			
+			mem::ObjectList< mem::Universal_Type<PVOID, ULONG> > *olx = new mem::ObjectList< mem::Universal_Type<PVOID, ULONG> >;
+		//	mem::read_x86< PVOID >lister_t *olx = new mem::read_x86< PVOID >::lister_t;
+		//	mem::read_x86< PVOID > r_a;
+		//	r_a.rx( olx , tbi.TebBaseAddress , reinterpret_cast<PVOID>(teb.ProcessEnvironmentBlock) );
 				//reinterpret_cast<PVOID64>(&_peb)
 				
 
 		
-				//mem::read(ol, reinterpret_cast<PPEB>(teb.ProcessEnvironmentBlock), &_peb);
-				//mem::read(ol, reinterpret_cast<PROCESS_PARAMETERS *>(_peb.ProcessParameters), &pp);
-			//	wchar_t *CommandLine = new wchar_t[pp.CommandLine.Length * 2];
-			//	RtlZeroMemory(CommandLine, pp.CommandLine.Length * 2);
-			//	if (mem::read(ol, reinterpret_cast<wchar_t *> (pp.CommandLine.Buffer), CommandLine, pp.CommandLine.Length * 2))
-			//	{
-			//		_asm {nop}
-			//	}
-
-		//		wchar_t *appName = new wchar_t[pp.ApplicationName.Length * 2];
-		//		RtlZeroMemory(appName, pp.ApplicationName.Length * 2);
-		//		size_t sz_ = pp.ApplicationName.Length * 2;
-		//		mem::read(ol, reinterpret_cast<wchar_t *>(pp.ApplicationName.Buffer), appName, sz_);
-
-			//}
-			//delete ol;
-			// ReadProcessMemory(proc_Handle, tbi.TebBaseAddress ,reinterpret_cast<PTEB>(&teb), sizeof(TEB), &Readed);
-			// printf("PEB = %x\n", teb.ProcessEnvironmentBlock);
-			// {
-			// }
-			// Readed = 0;
-			/* ReadProcessMemory(proc_Handle, _peb.ProcessParameters, reinterpret_cast<PPROCESS_PARAMETERS>(&pp), sizeof(pp), &Readed);
-			wchar_t *CommandLine = new wchar_t[pp.CommandLine.Length * 2];
-			char *prcName = new char[pp.CommandLine.Length*2];
-			RtlZeroMemory(prcName, pp.CommandLine.Length * 2);
-			ReadProcessMemory(proc_Handle, pp.CommandLine.Buffer, CommandLine, pp.CommandLine.Length, &Readed);
-			wcstombs(prcName, CommandLine, pp.CommandLine.Length);
-			printf("prcName =%s\n", prcName);
-			//pp.ApplicationName
-			wchar_t *ApplicationName = new wchar_t[pp.ApplicationName.Length * 2];
-			char *appName = new char[pp.ApplicationName.Length * 2];
-			RtlZeroMemory(appName, pp.ApplicationName.Length * 2);
-			ReadProcessMemory(proc_Handle, pp.ApplicationName.Buffer, ApplicationName, pp.ApplicationName.Length, &Readed);
-			wcstombs(appName, ApplicationName, pp.ApplicationName.Length);
-			printf("appName =%s\n", appName);
-			printf("ImageBase = %x\n", _peb.ImageBaseAddress);
-			std::vector< char > buffer;
-			buffer.resize(100);
-			VirtualProtectEx(proc_Handle, _peb.ImageBaseAddress, 100, PAGE_EXECUTE_READ, &_old_protect);
-			ReadProcessMemory(proc_Handle, _peb.ImageBaseAddress, reinterpret_cast<LPVOID>(&buffer[0]), buffer.size(), &Readed);
-
-			delete prcName;
-			delete CommandLine;*/
 		}
 		//  ::CloseHandle(proc_Handle);
 	}
 
 };
 
-struct GetProcessBasicInfo
+struct GetProcessBasicInfo:protected mem::_handle
 {
-	HANDLE proc_Handle;
+	//HANDLE proc_Handle;
 	GetProcessBasicInfo(DWORD Pid) {
-		proc_Handle = ::OpenProcess(PROCESS_ALL_ACCESS, true, Pid);
+		//proc_Handle = ::OpenProcess(PROCESS_ALL_ACCESS, true, Pid);
 		HINSTANCE hinst_ntdll = LoadLibraryA("ntdll.dll");
 		//	NtQueryInformationProcess = reinterpret_cast<PNTQUERYINFORMATIONPROCESS>(GetProcAddress(hinst_ntdll, "NtQueryInformationProcess"));
 		NtWow64Query64InformationProcess = reinterpret_cast<PNTWOW64QUERY64INFORMATIONPROCESS>(GetProcAddress(hinst_ntdll, "NtWow64QueryInformationProcess64"));
 		PBI_WOW64  ProcessInfo;
-		if (hinst_ntdll)
-		{
+		//if (hinst_ntdll)
+		//{
 			//	PEBx64 _peb;
 			PROCESS_PARAMETERS    pp;
 			ULONG RLength;
@@ -102,22 +63,32 @@ struct GetProcessBasicInfo
 			//	ULONG size = 1000;
 			//	ProcessInfo.resize(size);
 			//	memset(&ProcessInfo[0], 0, size);
-
-			char *prcName = NULL;
-			NTSTATUS NtStatus = NtWow64Query64InformationProcess(proc_Handle,
+			mem::_handle open(PROCESS_VM_READ, Pid);
+			//char *prcName = NULL;
+			NTSTATUS NtStatus = NtWow64Query64InformationProcess(mem::_handle::get(),
 				ProcessBasicInformation,
 				reinterpret_cast<PVOID>(&ProcessInfo),
 				sizeof(PBI_WOW64),
 				&RLength);
-			if (STATUS_SUCCESS == NtStatus)
-			{
+			    if (STATUS_SUCCESS != NtStatus)
+			      return ;
 				PEBx _peb;
 				//		PPBI_WOW64 pbi = reinterpret_cast<PPBI_WOW64>(&ProcessInfo[0]);
-				mem::_handle open(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ | READ_CONTROL, Pid);
-				mem::ObjectList< mem::Universal_Type< PVOID64, ULONG64 > > *ol = new mem::ObjectList< mem::Universal_Type<PVOID64, ULONG64> >;
-				//	mem::read(ol, reinterpret_cast<PPEB *>(ProcessInfo.PebBaseAddress), &teb);
+				/*PROCESS_QUERY_INFORMATION | PROCESS_VM_READ | READ_CONTROL PROCESS_ALL_ACCESS*/
+				
+				//mem::ObjectList< mem::Universal_Type< PVOID, ULONG > > *ol = new mem::ObjectList< mem::Universal_Type< PPEBx, ULONG64> >;
+				mem::IS_WOW64 iw;
+				if (!iw.yes())
+				{
+				  mem::read_x86< VOID >::lister_t *ol = new mem::read_x86< VOID >::lister_t; 
+				  mem::read_x86< VOID > x_;
+				  x_.rx(ol,reinterpret_cast<PVOID>(ProcessInfo.PebBaseAddress),reinterpret_cast<PPEBx>(&_peb));
+				}
+				//PVOID64 _ppeb = reinterpret_cast<PVOID64>(&_peb);
+				//mem::read(ol, reinterpret_cast<PPEB *>(ProcessInfo.PebBaseAddress), &teb);
 
 				//mem::read(ol, reinterpret_cast<PPEBx>(ProcessInfo.PebBaseAddress), &_peb);
+				
 				//	mem::read(ol, reinterpret_cast<PROCESS_PARAMETERS *>(_peb.ProcessParameters), &pp);
 				//ReadProcessMemory(proc_Handle, ProcessInfo.PebBaseAddress, &_peb, sizeof(PEB), &Readed);
 				//ReadProcessMemory(proc_Handle, _peb.ProcessParameters, &pp, sizeof(PROCESS_PARAMETERS), &Readed);
@@ -129,10 +100,9 @@ struct GetProcessBasicInfo
 				//	size_t counter = 0;
 				//	wcstombs_s(static_cast<size_t *>(&counter), prcName, pp.CommandLine.Length, reinterpret_cast<wchar_t *>(CommandLine),  MAX_PATH);
 				//(prcName, CommandLine, pp.CommandLine.Length);
-			}
+		//	}
 		}
-	}
-};
+	};
 
 struct GetProcessSeq
 {

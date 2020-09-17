@@ -9,6 +9,9 @@
 #include <mutex>
 #include "auto_sync.h"
 #include "proc_mini_lib.h"
+
+#define IS_TRUE(cause, msg) if (!(cause)) { throw std::runtime_error(msg); }
+
 //NtWow64ReadVirtualMemory64
 
 typedef LONG(__stdcall *PNTWOW64READVIRTUALMEMORY64)(
@@ -31,7 +34,17 @@ typedef LONG(__stdcall *NtWow64QueryInformationProcess64) (
 
 namespace mem
 {
-
+/*typedef struct PEBx {
+	BYTE Reserved1[2];
+	BYTE BeingDebugged;
+	BYTE Reserved2[21];
+	PPEB_LDR_DATA LoaderData;
+	PVOID64 ProcessParameters;
+	BYTE Reserved3[520];
+	void *PostProcessInitRoutine;
+	BYTE Reserved4[136];
+	ULONG SessionId;
+};*/
 
 
  // static PNTWOW64READVIRTUALMEMORY64 NtWow64ReadVirtualMemory64 = NULL;
@@ -40,7 +53,6 @@ namespace mem
 	    typename t_ptr,
 		typename t_size
 	  >
-	
   struct  Universal_Type
   {
     Universal_Type() {};
@@ -69,7 +81,7 @@ namespace mem
 
   struct _handle
   {
-    _handle(DWORD _Access, DWORD Pid):_pid(Pid),_access(_Access)
+	  _handle(DWORD _Access, DWORD Pid):_pid(Pid),_access(_Access)
     {  
       init();
     };
@@ -89,6 +101,10 @@ namespace mem
         return;
       }
       handle = ::OpenProcess(_access, true, _pid);
+	  if (handle)
+	  {
+		  __asm{nop}
+	  }
     }
 
     _handle()
@@ -122,7 +138,9 @@ namespace mem
     DWORD _access;
     static HANDLE handle;
   };
-  
+  //HANDLE _handle::handle = NULL;
+
+
   class process_mem_man
   {
   public:
@@ -132,6 +150,28 @@ namespace mem
     virtual ~process_mem_man() {};
   };
 
+  struct IS_WOW64
+	  :protected mem::_handle
+  {
+	  IS_WOW64():
+		  is_wow64_process(FALSE)
+	  {
+		  HANDLE test = mem::_handle::get();
+    	IS_TRUE(IsWow64Process(test, &is_wow64_process),"IsWow64 failed!");  
+	  }
+
+	  bool yes()
+	  {
+		  return (is_wow64_process);
+	  }
+
+	  ~IS_WOW64(){}
+  private:
+	  		BOOL is_wow64_process;
+ 
+  };
+
+
 
    struct protector:
      public process_mem_man, protected _handle
@@ -140,8 +180,8 @@ namespace mem
     {
       this->Ut = Ut;
       _process = get();
-    //  _old_protect = 0;
-    //  VirtualProtectEx(get() , Ut.get_ptr(), Ut.get_sz(), PAGE_EXECUTE_READ, &_old_protect);
+      _old_protect = 0;
+      VirtualProtectEx(get() , Ut.get_ptr(), Ut.get_sz(), PAGE_EXECUTE_READ, &_old_protect);
     }
 
 
@@ -154,8 +194,11 @@ namespace mem
     {
  
       AUTO_MUTEX(this);
-      size_t readed = _rd_();
-      //buffer.resize(readed);
+      //size_t readed = _rd_();
+	  size_t readed = _rd();
+      if (0==readed)
+		  return(0);
+	  buffer.resize(readed);
       RtlCopyMemory(_buffer, &buffer[0], readed);
       return (readed);
     }
@@ -170,7 +213,13 @@ namespace mem
       AUTO_MUTEX(this);
       SIZE_T Readed = 0;
       buffer.resize(Ut.get_sz());
-      ReadProcessMemory(get(), Ut.get_ptr(), &buffer[0], Ut.get_sz(), &Readed);
+      if (!ReadProcessMemory(get(), Ut.get_ptr(), &buffer[0], Ut.get_sz(), &Readed))
+	  {
+		 DWORD Error = GetLastError();
+		 printf("ReadProcessMemory(...) error %x\n",Error);
+		 __asm{nop}
+
+	  }
       reset();
       return (Readed);
     }
@@ -178,7 +227,7 @@ namespace mem
   ULONG _rd_()
   {
 	  AUTO_MUTEX(this);
-	 
+	  PEBx _peb;
 	  SIZE_T Readed = 0;
 	  HINSTANCE load_dll = NULL;
 	  load_dll = GetModuleHandle("ntdll.dll");
@@ -189,10 +238,16 @@ namespace mem
 	  NtWow64ReadVirtualMemory64 = reinterpret_cast<PNTWOW64READVIRTUALMEMORY64>(GetProcAddress(load_dll, "NtWow64ReadVirtualMemory64"));
 	  //buffer.resize(Ut.get_sz());
 	  //ReadProcessMemory(get(), Ut.get_ptr(), &buffer[0], Ut.get_sz(), &Readed);
-	 
-	//  HANDLE test = get();
-	//  LONG result_ = NtWow64ReadVirtualMemory64(test, Ut.get_ptr(), &peb_, sizeof(peb_), &Readed);
-	//  reset();
+	  
+	  HANDLE test = get();
+	 // BOOL is_wow64_process = FALSE;
+	 // IS_TRUE(IsWow64Process(test, &is_wow64_process),"IsWow64 failed!");
+	  LONG result_ = 0 ;
+	  //if (is_wow64_process)
+	 // {
+	   result_ = NtWow64ReadVirtualMemory64(test, Ut.get_ptr(), &_peb, sizeof(_peb), reinterpret_cast<PULONG64>(&Readed));
+	 // }
+	   //  reset();
 	  return ( static_cast<ULONG> (Readed));
   }
 
@@ -302,28 +357,29 @@ namespace mem
   }
 
 
-  template
-	  <
+	template
+	<
       typename T,
 	  typename lister  = mem::ObjectList<mem::Universal_Type<T,UINT64>>,
       typename binder_ = mem::_handle
-	  >
-	  struct read_a
-	  {
+	>
+	struct read_x64
+	{
 		typedef T t_;
 		typedef lister lister_t;
 		typedef binder_ binder_t;
-	
-		ULONG64 rx(lister *list,PVOID64 Addr_src/*,T *Addr_dst*/)
+	  
+		size_t
+		rx(lister *list,T Addr_src,T Addr_dst)
 		{
 			
 		  object = list->Create(CreatorUniversalType(Addr_src));
-		  return (/*object->read(Addr_dst)*/0);
-
-		
+		  readed = object->read( Addr_dst );
+		  return (readed);
 		}
 	  private:
 		typename  lister::storage *object;
+		size_t readed;
 	  };
 /*
 
@@ -336,17 +392,19 @@ namespace mem
       typename lister  = mem::ObjectList<T>,
       typename binder_ = mem::_handle
 	  >
-	  struct read_b
+	  struct read_x86
 	  {
 		typedef T t_;
 		typedef lister lister_t;
 		typedef binder_ binder_t;
 	
-  	    read_b(lister *list, T *Addr_src, T *Addr_dst,size_t sz_)
+  	    size_t rx(lister *list, T *Addr_src, T *Addr_dst)
 		{
 			/*lister::storage **/
+			size_t sz_ = sizeof(size_t);
 			object = list->Create(CreatorUniversalType(Addr_src,sz_));
 			readed = object->read(Addr_dst);
+		  return (readed);
 		}
 
 		size_t size(void)
@@ -355,6 +413,7 @@ namespace mem
 		}
 
 	  private:
+		size_t readed;
 		typename lister::storage *object;
-};
+	};
  }
